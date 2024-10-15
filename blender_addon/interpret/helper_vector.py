@@ -50,7 +50,6 @@ class Vector2:
     def __getitem__(self, key):
         return [self.X, self.Y][key]
 
-# need to check the Z for position/normal, might be oriented wrong direction
 class PositionVector(Vector3):
     def __str__(self) -> str:
         return f"v {-self.X} {-self.Y} {self.Z}" 
