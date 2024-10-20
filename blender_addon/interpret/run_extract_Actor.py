@@ -1,11 +1,9 @@
 from os.path import dirname, join, exists
-from helper_vector import *
-from helper_obj_file import *
-from helper_c3 import *
-from helper_c3_export import *
-from helper_mssb_data import *
-
-from helper_mssb_data import get_parts_of_file, float_from_fixedpoint
+from .helper_vector import *
+from .helper_c3 import *
+from .helper_c3_export import *
+from .helper_mssb_data import *
+from .helper_mssb_data import get_parts_of_file, float_from_fixedpoint
 import os, json
 
 def main():

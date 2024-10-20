@@ -1,10 +1,10 @@
 from dataclasses import dataclass
 import typing
-from helper_vector import *
+from .helper_vector import *
 from os.path import join, exists
 from os import mkdir, listdir, rename
-from helper_c3 import SECTION_TYPES
-from helper_c3_export import *
+from .helper_c3 import SECTION_TYPES
+from .helper_c3_export import *
 import numpy as np
 import shutil
 

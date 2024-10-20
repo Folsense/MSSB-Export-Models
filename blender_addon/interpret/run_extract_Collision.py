@@ -1,6 +1,6 @@
 from os.path import dirname, join, exists
-from helper_collision import *
-from helper_mssb_data import get_parts_of_file
+from .helper_collision import *
+from .helper_mssb_data import get_parts_of_file
 import os
 from pathlib import Path
 

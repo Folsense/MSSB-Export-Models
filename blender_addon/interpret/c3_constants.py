@@ -1,0 +1,2 @@
+class BP_COMMANDS():
+    BPMEM_BLENDMODE = 0x41

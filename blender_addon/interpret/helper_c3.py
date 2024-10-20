@@ -1,10 +1,9 @@
 from __future__ import annotations
-from helper_vector import *
-from helper_rotation import *
-from helper_string import warn
+from .helper_vector import *
+from .helper_rotation import *
+from .helper_string import warn
 from struct import pack
-
-from helper_mssb_data import DataBytesInterpreter
+from .helper_mssb_data import DataBytesInterpreter
 
 def log_to_file(log_file, message):
     with open(log_file, 'a', encoding='utf-8') as f:

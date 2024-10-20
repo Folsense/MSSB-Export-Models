@@ -1,16 +1,7 @@
 from os.path import dirname, join, basename
 
-from helper_texture import *
-from helper_mssb_data import get_parts_of_file, ensure_dir, write_text
-
-try:
-    from PIL.Image import Image
-except:
-    print("Make sure you have pillow installed. If you don't please run")
-    print("\'python -m pip install -r requirements.txt\'")
-    input("Press Enter To continue...")
-    exit()
-
+from .helper_texture import *
+from .helper_mssb_data import get_parts_of_file, ensure_dir, write_text
 
 def main():
     # input_file = input("Input file name: ")

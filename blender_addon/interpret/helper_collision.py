@@ -1,7 +1,7 @@
 from struct import calcsize
 from enum import Enum
 import json
-from helper_mssb_data import DataBytesInterpreter
+from .helper_mssb_data import DataBytesInterpreter
 
 def open_binary_get_bytes(file):
     with open(file, "rb") as f:

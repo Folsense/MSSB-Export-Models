@@ -1,11 +1,11 @@
 from os.path import dirname, join, exists
-from helper_vector import *
-from helper_obj_file import *
-from helper_c3 import *
-from helper_mssb_data import *
-from helper_c3_export import *
-
-from helper_mssb_data import get_parts_of_file, float_from_fixedpoint
+from .helper_vector import *
+from .helper_obj_file import *
+from .helper_c3 import *
+from .helper_mssb_data import *
+from .helper_c3_export import *
+from .c3_constants import *
+from .helper_mssb_data import get_parts_of_file, float_from_fixedpoint
 import os, json
 
 def main():
@@ -145,7 +145,6 @@ def export_model(file_bytes:bytearray, output_directory:str, part_of_file = 2, m
         log_to_file(log_file, f"DisplayObjectDisplayHeader {i}: {dod}")
 
         dods = [DisplayObjectDisplayState(file_bytes, dod.offsetToDisplayStateList + i * DisplayObjectDisplayState.SIZE_OF_STRUCT) for i in range(dod.numberOfDisplayStateEntries)]
-        all_draws = []
 
         drawGroups:list[GEODrawGroup] = []
         stateHelper:DisplayStateSettingHelper = DisplayStateSettingHelper(log_file)
@@ -160,65 +159,13 @@ def export_model(file_bytes:bytearray, output_directory:str, part_of_file = 2, m
                 for layerInd in stateHelper.textureSettings:
                     textureInds[layerInd] = stateHelper.textureSettings[layerInd].textureIndex
                 tris = parse_indices(file_bytes[dod.offsetToPrimitiveList:][:dod.byteLengthPrimitiveList], stateHelper.getComponents())
-                all_draws.append((tris, stateHelper.getTextureIndex(), 
-                    [f"Using Texture {stateHelper.getTextureIndex()}", 
-                    f"Using Matrix {stateHelper.getSrcMtxIndex()}, {stateHelper.getDestMtxIndex()}",
-                    f"Display Object {dod_i}"]))
                 log_to_file(log_file, f"Primitive List for Descriptor {i}.{dod_i}: {tris}")
-                faceList = []
-                for face in tris:
-                    vertexList = []
-                    for point in face.obj_indices:
-                        vertex = GEOMeshVertex(None, None, None, None)
-                        if point.position_coordinate:
-                            vertex.positionInd = point.position_coordinate.ind
-                        if point.texture_coordinate:
-                            vertex.texCoordInd = point.texture_coordinate.ind
-                        if point.normal_coordinate:
-                            vertex.normalInd = point.normal_coordinate.ind
-                        if point.color:
-                            vertex.colorInd = point.color.ind
-                        vertexList.append(vertex)
-                    faceObj = GEOMeshFace(vertexList)
-                    faceList.append(faceObj)
-                drawGroup = GEODrawGroup(textureInds, faceList)
+                drawGroup = GEODrawGroup(textureInds, tris)
                 drawGroups.append(drawGroup)
         
         mesh_obj = GEOMesh(mesh_name, numberOfTextures, positionCoords, texCoords, normalCoords, meshColors, drawGroups)
         mesh_arr.append(mesh_obj)
 
-        # Write to Obj
-        coord_group = OBJGroup(
-            positions=poss,
-            textures=tex_coords,
-            normals=norms,
-            colors=colors,
-            faces=[],
-            comments=[]
-            )
-
-        draw_groups = [OBJGroup(positions=[], textures=[], normals=[], colors = [], faces=gg[0], mtl=f"mssbMtl.{gg[1]}" if gg[1] != None else None, name=f"group{obj_part}", comments=gg[2]) for obj_part, gg in enumerate(all_draws)]
-
-        draw_groups = [coord_group] + draw_groups
-        # assert False
-
-        mtl_file = join(mtl_header, "mtl.mtl")
-        obj_file = OBJFile(
-            groups=draw_groups, 
-            mtl_file=mtl_file
-            )
-
-        # if not obj_file.assert_valid():
-        #     debug = 0
-
-        write_text(str(obj_file), join(output_directory, d.name + ".obj"))
-        log_to_file(log_file, f"Exported {d.name}.obj to {output_directory}")
-
-    # json_file = join(output_directory, "model.json")
-    # if os.path.exists(json_file):
-    #     os.remove(json_file)
-    # with open(json_file, 'w') as f:
-    #     f.write(json.dumps(json_dict, indent=4))
     modelObj = C3GEOSection(mesh_arr)
     return modelObj
 
@@ -267,49 +214,37 @@ def parse_array_values_color(b:bytes, entry_count:int, format:int)->list:
         to_return.append(ColorVector(*color))
     return to_return
 
-def parse_quads(l: list, cls=None) -> list:
+def parse_quads(l: list) -> list:
     to_return = []
     assert(len(l) % 4 == 0)
     for i in range(len(l) // 4):
         ii = i*4
         to_return.append((l[ii+0], l[ii+1], l[ii+2]))
         to_return.append((l[ii+2], l[ii+3], l[ii+0]))
-    if cls == None:
-        return to_return
-    else:
-        return [cls(*x) for x in to_return]
+    return to_return
 
-def parse_triangles(l: list, cls=None) -> list:
+def parse_triangles(l: list) -> list:
     to_return = []
     assert(len(l) % 3 == 0)
     for i in range(len(l) // 3):
         ii = i*3
         to_return.append((l[ii+0], l[ii+1], l[ii+2]))
-    if cls == None:
-        return to_return
-    else:
-        return [cls(*x) for x in to_return]
+    return to_return
 
-def parse_fan(l: list, cls=None) -> list:
+def parse_fan(l: list) -> list:
     to_return = []
     for i in range(len(l) - 2):
         to_return.append((l[0], l[i+1], l[i+2]))
-    if cls == None:
-        return to_return
-    else:
-        return [cls(*x) for x in to_return]
+    return to_return
 
-def parse_strip(l: list, cls=None) -> list:
+def parse_strip(l: list) -> list:
     to_return = []
     for i in range(len(l) - 2):
         if i%2 == 0:
             to_return.append((l[i], l[i+1], l[i+2]))
         else:
             to_return.append((l[i+2], l[i+1], l[i]))
-    if cls == None:
-        return to_return
-    else:
-        return [cls(*x) for x in to_return]
+    return to_return
 
 def parse_indices(b: bytes, components) -> list[OBJFace]:
     vector_size = components["vector_size"]
@@ -319,8 +254,8 @@ def parse_indices(b: bytes, components) -> list[OBJFace]:
     norm_offset = components["norm_offset"]
     color_size = components["color_size"][0]
     color_offset = components["color_offset"][0]
-    uv_size = components["uv_size"][0]
-    uv_offset = components["uv_offset"][0]
+    uv_sizes = components["uv_size"]
+    uv_offsets = components["uv_offset"]
     offset = 0
 
     faces_to_return = []
@@ -336,13 +271,14 @@ def parse_indices(b: bytes, components) -> list[OBJFace]:
         elif command == 0x00: # nop
             continue
         
-        new_tris = []
+        vertices = []
         shifted_command = command >> 3
         if shifted_command in [0x10, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17]:
             assert(command & 0x7 == 0)
             count = int.from_bytes(b[offset:][:2], 'big')
             offset += 2
             for _ in range(count):
+                # All of this assumes direct indexing is not used
                 v = b[offset:][:vector_size]
                 if pos_size > 0:
                     pos = int.from_bytes(v[pos_offset:][:pos_size], 'big')
@@ -354,38 +290,37 @@ def parse_indices(b: bytes, components) -> list[OBJFace]:
                 else:
                     norm = None
 
+                # I think vertices can have up to two colors? Need to look into/support that
                 if color_size > 0:
                     color = int.from_bytes(v[color_offset:][:color_size], 'big')
                 else:
                     color = None
 
-                if uv_size > 0:
-                    uv = int.from_bytes(v[uv_offset:][:uv_size], 'big')
-                else:
-                    uv = None
+                uv_inds = []
+                for ind in range(8):
+                    if uv_sizes[ind] > 0:
+                        uv_inds.append(int.from_bytes(v[uv_offsets[ind]:][:uv_sizes[ind]], 'big'))
+                    else:
+                        uv_inds.append(None)
 
-                new_tris.append(OBJIndices(
-                    position_coordinate=OBJIndex(pos),
-                    normal_coordinate=OBJIndex(norm),
-                    color=OBJIndex(color),
-                    texture_coordinate=OBJIndex(uv)
-                ))
+                vertices.append(GEOMeshVertex(pos, norm, uv_inds, color))
                 offset += vector_size
         else:
             print(f"Unrecognized command: {hex(command)}")
             assert(False)
 
+        new_tris = []
         if shifted_command == 0x10: # Draw Quads
-            new_tris = parse_quads(new_tris)
+            new_tris = parse_quads(vertices)
             # new_tris = []
         elif shifted_command == 0x12: # Draw Triangles
-            new_tris = parse_triangles(new_tris)
+            new_tris = parse_triangles(vertices)
             # new_tris = []
         elif shifted_command == 0x13: # Draw Triangle Strip
-            new_tris = parse_strip(new_tris)
+            new_tris = parse_strip(vertices)
             # new_tris = []
         elif shifted_command == 0x14: # Draw Triangle Fan
-            new_tris = parse_fan(new_tris)
+            new_tris = parse_fan(vertices)
             # new_tris = []
         elif shifted_command == 0x15: # Draw Lines
             print("Unimplemented Draw command")
@@ -400,9 +335,9 @@ def parse_indices(b: bytes, components) -> list[OBJFace]:
             print("Unknown Draw command")
             assert(False)
 
-        faces_to_return.extend(new_tris)
+        faces_to_return.extend([GEOMeshFace(tri) for tri in new_tris])
     
-    return [OBJFace(face) for face in faces_to_return]
+    return faces_to_return
 
 if __name__ == "__main__":
     main()

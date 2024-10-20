@@ -1,7 +1,7 @@
-from helper_c3 import SECTION_TYPES
-from helper_obj_file import PositionVector, NormalVector, ColorVector, TextureVector
-from helper_vector import Vector3, Vector4
-from helper_rotation import sqtTransform
+from .helper_c3 import SECTION_TYPES
+from .helper_obj_file import PositionVector, NormalVector, ColorVector, TextureVector
+from .helper_vector import Vector3, Vector4
+from .helper_rotation import sqtTransform
 import numpy as np
 
 class C3ExportGroup():
@@ -19,7 +19,7 @@ class C3Section():
 
 #-- GEO data --#
 class GEOMeshVertex():
-    def __init__(self, positionInd:int, normalInd:int, texCoordInd:int, colorInd:int) -> None:
+    def __init__(self, positionInd:int, normalInd:int, texCoordInd:list[int], colorInd:int) -> None:
         self.positionInd = positionInd
         self.normalInd = normalInd
         self.texCoordInd = texCoordInd

@@ -1,9 +1,10 @@
 from __future__ import annotations
 from dataclasses import dataclass
-from PIL.Image import Image, new as new_Image
 from os.path import join
-from helper_mssb_data import *
+from .helper_mssb_data import *
 import struct
+import bpy
+from ..PIL.Image import Image, new as new_Image
 
 CMPR_BLOCK_SIZE = 8
 

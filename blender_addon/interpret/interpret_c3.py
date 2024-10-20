@@ -1,22 +1,22 @@
 from os import rename
-from run_extract_Texture import export_images
-from run_extract_Model import *
-from run_extract_Actor import export_actor
-from helper_c3 import SECTION_TYPES, SECTION_TEMPLATES
-from helper_c3_export import *
-from run_extract_Collision import export_collision
-from helper_x3d import x3d_export
-import traceback, os, shutil
-import bpy
+from .run_extract_Texture import export_images
+from .run_extract_Model import *
+from .run_extract_Actor import export_actor
+from .helper_c3 import SECTION_TYPES, SECTION_TEMPLATES
+from .helper_c3_export import *
+from .run_extract_Collision import export_collision
+import traceback, os, shutil, importlib
+from . import helper_blender
 
 def try_export_texture(b, new_out_folder, part) -> tuple[bool, str, dict]:
     try:
         output_text = ''
-        base_images = export_images(b, part)
-        assert len(base_images.images) > 0
-        output_text += f"Part {part} interpreted as textures.\n"
-        base_images.write_images_to_folder(new_out_folder)
-        base_images.write_mtl_file(join(new_out_folder, 'mtl.mtl'), "")
+        # Don't need to extract the textures if they've already been extracted
+        if not os.path.exists(new_out_folder):
+            base_images = export_images(b, part)
+            assert len(base_images.images) > 0
+            output_text += f"Part {part} interpreted as textures.\n"
+            base_images.write_images_to_folder(new_out_folder)
         section_data = C3TextureSection(part)
         return 1, output_text, section_data
     except:
@@ -64,7 +64,9 @@ export_methods = {
     SECTION_TYPES.collision: try_export_collision
 }
 
-def interpret_bytes(b:bytearray, output_folder:str, format:str):
+def interpret_bytes(model_file:str, format_file:str, output_folder:str):
+    with open(model_file, 'rb') as model_f:
+        b = model_f.read()
     parts_of_file = get_parts_of_file(b)
     output_text = f"{len(parts_of_file)} {'part' if len(parts_of_file) == 1 else 'parts'} of file.\n"
     offsets_text = "Offsets of parts: " + ", ".join([hex(offset) for offset in parts_of_file]) + "\n"
@@ -74,7 +76,8 @@ def interpret_bytes(b:bytearray, output_folder:str, format:str):
         os.mkdir(output_folder)
 
     any_outputs = False
-    section_template = SECTION_TEMPLATES.get(format, None)
+    with open(format_file, 'r') as format_f:
+        section_template = json.loads(format_f.read())
     export_groups = None
     if section_template is not None:
         export_groups = C3ExportGroup()
@@ -88,7 +91,7 @@ def interpret_bytes(b:bytearray, output_folder:str, format:str):
     for part in [x for x in range(len(parts_of_file))]:
         # print(f'extracting part {part}')
         any_outputs_in_this_part = False
-        
+
         new_out_folder = join(output_folder, f"part {part}")
         if not os.path.exists(new_out_folder):
             os.mkdir(new_out_folder)
@@ -102,7 +105,7 @@ def interpret_bytes(b:bytearray, output_folder:str, format:str):
             for group in section_template:
                 for s_type in section_template[group]:
                     if section_template[group][s_type] == part:
-                        possible_section_types = [s_type]
+                        possible_section_types = [int(s_type)]
                         this_group = group
 
         for s_type in possible_section_types:
@@ -126,5 +129,22 @@ def interpret_bytes(b:bytearray, output_folder:str, format:str):
     #     x3d_export(output_folder, export_groups)
     return export_groups
 
-def do_blender_import(folder_name):
-    return ""
+def init_blender_import(context, filepath, global_matrix):
+    importlib.reload(helper_blender)
+    file_dir = os.path.dirname(filepath)
+    files = os.listdir(file_dir)
+
+    model_file = [fname for fname in files if fname.split('.')[-1] == 'dat']
+    if len(model_file) == 0:
+        return
+    model_file = os.path.join(file_dir, model_file[0])
+
+    format_file = [fname for fname in files if fname.split('.')[-1] == 'fmt']
+    if len(format_file) == 0:
+        return
+    format_file = os.path.join(file_dir, format_file[0])
+
+    model_data = interpret_bytes(model_file, format_file, file_dir)
+    
+    helper_blender.do_blender_import(context, global_matrix, model_data, file_dir)
+    return {"FINISHED"}
